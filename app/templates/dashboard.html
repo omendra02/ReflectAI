@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - ReflectAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .entry-card {
+            transition: transform 0.2s ease;
+        }
+        .entry-card:hover {
+            transform: translateY(-2px);
+        }
+        .sentiment-positive {
+            color: #10B981;
+        }
+        .sentiment-negative {
+            color: #EF4444;
+        }
+        .sentiment-neutral {
+            color: #6B7280;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .logo {
+            width: 32px;
+            height: 32px;
+        }
+        .logo-text {
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #4F46E5;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <div class="logo-container">
+                        <svg class="logo text-indigo-600" viewBox="0 0 800 800" fill="currentColor">
+                            <!-- Simplified logo path - laurel wreath and feather -->
+                            <path d="M400 50c-193.3 0-350 156.7-350 350s156.7 350 350 350 350-156.7 350-350S593.3 50 400 50zm0 640c-160.9 0-291.3-130.4-291.3-291.3S239.1 107.4 400 107.4s291.3 130.4 291.3 291.3S560.9 690 400 690z"/>
+                            <path d="M400 150c-138.1 0-250 111.9-250 250s111.9 250 250 250 250-111.9 250-250S538.1 150 400 150zm0 460c-115.7 0-209.3-93.6-209.3-209.3S284.3 190.7 400 190.7s209.3 93.6 209.3 209.3S515.7 610 400 610z"/>
+                        </svg>
+                        <span class="text-2xl font-bold logo-text">ReflectAI</span>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-gray-600">Welcome, {{ current_user.username }}</span>
+                    <a href="{{ url_for('logout') }}" class="text-gray-600 hover:text-indigo-600">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Journal Entry Form -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">New Journal Entry</h2>
+                    <form id="journalForm" class="space-y-4">
+                        <div>
+                            <label for="entry" class="block text-sm font-medium text-gray-700">How are you feeling today?</label>
+                            <textarea id="entry" name="entry" rows="6" required
+                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                placeholder="Write your thoughts here..."></textarea>
+                        </div>
+                        <div class="flex justify-end">
+                            <button type="submit"
+                                class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                Submit Entry
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Recent Entries -->
+            <div class="lg:col-span-1">
+                <div class="bg-white rounded-lg shadow-md p-6">
+                    <h2 class="text-2xl font-bold text-gray-900 mb-4">Recent Entries</h2>
+                    <div id="recentEntries" class="space-y-4">
+                        <!-- Entries will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analysis Section -->
+        <div id="analysisSection" class="mt-8 hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">AI Analysis</h2>
+                <div id="analysisContent" class="prose max-w-none">
+                    <!-- Analysis will be loaded here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('journalForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const entry = document.getElementById('entry').value;
+            
+            try {
+                const response = await fetch('/submit_entry', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: entry })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    // Show analysis
+                    document.getElementById('analysisSection').classList.remove('hidden');
+                    document.getElementById('analysisContent').innerHTML = data.analysis;
+                    
+                    // Add to recent entries
+                    const recentEntries = document.getElementById('recentEntries');
+                    const entryCard = document.createElement('div');
+                    entryCard.className = 'entry-card bg-gray-50 p-4 rounded-lg';
+                    entryCard.innerHTML = `
+                        <p class="text-gray-600">${entry.substring(0, 100)}${entry.length > 100 ? '...' : ''}</p>
+                        <div class="mt-2 flex items-center justify-between">
+                            <span class="text-sm ${getSentimentClass(data.sentiment.polarity)}">
+                                ${getSentimentText(data.sentiment.polarity)}
+                            </span>
+                            <span class="text-sm text-gray-500">${new Date().toLocaleDateString()}</span>
+                        </div>
+                    `;
+                    recentEntries.insertBefore(entryCard, recentEntries.firstChild);
+                    
+                    // Clear form
+                    document.getElementById('entry').value = '';
+                } else {
+                    alert('Error submitting entry: ' + data.error);
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while submitting your entry.');
+            }
+        });
+
+        function getSentimentClass(polarity) {
+            if (polarity > 0.2) return 'sentiment-positive';
+            if (polarity < -0.2) return 'sentiment-negative';
+            return 'sentiment-neutral';
+        }
+
+        function getSentimentText(polarity) {
+            if (polarity > 0.2) return 'Positive';
+            if (polarity < -0.2) return 'Negative';
+            return 'Neutral';
+        }
+    </script>
+</body>
+</html> 
