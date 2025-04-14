@@ -20,23 +20,57 @@ def get_detailed_sentiment(text):
     polarity = blob.sentiment.polarity
     subjectivity = blob.sentiment.subjectivity
     
-    # Step 3: Enhanced Sentiment Categorization
-    # Define sentiment categories with more sensitive thresholds
+    # Step 3: Enhanced Emotion Detection
+    # Define emotional keywords
+    anxiety_words = ['anxious', 'anxiety', 'worried', 'nervous', 'stress', 'stressed', 'panic', 'fear', 'uneasy', 'restless']
+    confusion_words = ['confused', 'unsure', 'uncertain', 'lost', 'puzzled', 'bewildered', 'dont know', "don't know", 'unclear']
+    negative_words = ['sad', 'bad', 'hard', 'difficult', 'struggle', 'overwhelm']
+    positive_words = ['good', 'happy', 'great', 'wonderful', 'excited', 'joy', 'hopeful', 'optimistic']
+    
+    # Check for presence of emotional keywords
+    has_anxiety = any(word in text for word in anxiety_words)
+    has_confusion = any(word in text for word in confusion_words)
+    has_negative = any(word in text for word in negative_words)
+    has_positive = any(word in text for word in positive_words)
+    
+    # Step 4: Enhanced Sentiment Categorization
+    emotions = []
+    if has_anxiety:
+        emotions.append("Anxious/Stressed")
+    if has_confusion:
+        emotions.append("Confused/Uncertain")
+    
+    # Determine primary sentiment
     if polarity <= -0.3:
         sentiment = "Strongly Negative"
-        description = "The text expresses strong negative emotions and concerns."
+        if has_anxiety and has_confusion:
+            description = "The text expresses strong anxiety and confusion, indicating a challenging emotional state."
+        elif has_anxiety:
+            description = "The text shows significant anxiety and stress, with strong negative emotions."
+        elif has_confusion:
+            description = "The text reveals deep confusion and uncertainty, with strong negative feelings."
+        else:
+            description = "The text expresses strong negative emotions and concerns."
     elif polarity <= -0.1:
         sentiment = "Negative"
-        description = "The text shows negative emotions and worries."
+        if has_anxiety and has_confusion:
+            description = "The text indicates both anxiety and confusion, suggesting emotional uncertainty."
+        elif has_anxiety:
+            description = "The text shows signs of anxiety and stress."
+        elif has_confusion:
+            description = "The text expresses confusion and uncertainty."
+        else:
+            description = "The text shows negative emotions and worries."
     elif polarity <= 0.1:
-        # Check for emotional keywords in neutral range
-        negative_words = ['sad', 'bad', 'hard', 'difficult', 'struggle', 'overwhelm', 'anxious', 'worried']
-        positive_words = ['good', 'happy', 'great', 'wonderful', 'excited', 'joy', 'hopeful', 'optimistic']
-        
-        has_negative = any(word in text.lower() for word in negative_words)
-        has_positive = any(word in text.lower() for word in positive_words)
-        
-        if has_negative and not has_positive:
+        if has_anxiety or has_confusion:
+            sentiment = "Mixed with Anxiety/Confusion"
+            if has_anxiety and has_confusion:
+                description = "While neutral in tone, the text expresses both anxiety and confusion."
+            elif has_anxiety:
+                description = "Despite a neutral tone, the text indicates underlying anxiety."
+            else:
+                description = "The text shows confusion despite its neutral tone."
+        elif has_negative and not has_positive:
             sentiment = "Negative"
             description = "The text shows signs of negative emotions despite the neutral tone."
         elif has_positive and not has_negative:
@@ -47,12 +81,18 @@ def get_detailed_sentiment(text):
             description = "The text has a balanced tone with mixed emotions."
     elif polarity <= 0.3:
         sentiment = "Positive"
-        description = "The text shows positive aspects and hopeful elements."
+        if has_anxiety or has_confusion:
+            description = "Despite positive elements, there are signs of underlying anxiety or uncertainty."
+        else:
+            description = "The text shows positive aspects and hopeful elements."
     else:
         sentiment = "Strongly Positive"
-        description = "The text expresses strong positive emotions and optimism."
+        if has_anxiety or has_confusion:
+            description = "While very positive, there are hints of underlying anxiety or uncertainty."
+        else:
+            description = "The text expresses strong positive emotions and optimism."
     
-    # Step 4: Subjectivity Analysis
+    # Step 5: Subjectivity Analysis
     if subjectivity > 0.7:
         subjectivity_level = "Highly Subjective"
         subjectivity_desc = "The text is very personal and emotionally charged."
@@ -63,10 +103,11 @@ def get_detailed_sentiment(text):
         subjectivity_level = "More Objective"
         subjectivity_desc = "The text maintains a relatively objective perspective."
     
-    # Step 5: Return Comprehensive Analysis
+    # Step 6: Return Comprehensive Analysis
     return {
         "sentiment": sentiment,
         "description": description,
+        "emotions": emotions,  # New field for specific emotions detected
         "subjectivity": subjectivity_level,
         "subjectivity_desc": subjectivity_desc,
         "polarity": round(polarity, 2),
